@@ -103,22 +103,74 @@ alter table public.memberships enable row level security;
 alter table public.check_ins enable row level security;
 alter table public.invite_codes enable row level security;
 
+-- RLS helpers (security definer — avoids pods <-> memberships recursion)
+create or replace function public.is_pod_leader(p_pod_id uuid)
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.pods
+    where id = p_pod_id and leader_id = (select auth.uid())
+  );
+$$;
+
+create or replace function public.is_pod_member(p_pod_id uuid, p_include_pending boolean default true)
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.memberships m
+    where m.pod_id = p_pod_id
+      and m.user_id = (select auth.uid())
+      and (m.status = 'active' or (p_include_pending and m.status = 'pending'))
+  );
+$$;
+
+create or replace function public.is_active_pod_member(p_pod_id uuid)
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select public.is_pod_member(p_pod_id, false);
+$$;
+
+create or replace function public.shares_active_pod_with(p_other_user_id uuid)
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.memberships m1
+    inner join public.memberships m2 on m1.pod_id = m2.pod_id
+    where m1.user_id = (select auth.uid())
+      and m2.user_id = p_other_user_id
+      and m1.status = 'active'
+      and m2.status = 'active'
+  );
+$$;
+
+grant execute on function public.is_pod_leader(uuid) to authenticated;
+grant execute on function public.is_pod_member(uuid, boolean) to authenticated;
+grant execute on function public.is_active_pod_member(uuid) to authenticated;
+grant execute on function public.shares_active_pod_with(uuid) to authenticated;
+
 -- Profiles
 create policy profiles_select_own on public.profiles
   for select using (auth.uid() = id);
 
 create policy profiles_select_pod_mates on public.profiles
-  for select using (
-    exists (
-      select 1
-      from public.memberships m1
-      join public.memberships m2 on m1.pod_id = m2.pod_id
-      where m1.user_id = auth.uid()
-        and m2.user_id = profiles.id
-        and m1.status = 'active'
-        and m2.status = 'active'
-    )
-  );
+  for select using (public.shares_active_pod_with(id));
 
 create policy profiles_update_own on public.profiles
   for update using (auth.uid() = id);
@@ -132,13 +184,8 @@ create policy pods_insert on public.pods
 
 create policy pods_select on public.pods
   for select using (
-    leader_id = auth.uid()
-    or exists (
-      select 1 from public.memberships m
-      where m.pod_id = pods.id
-        and m.user_id = auth.uid()
-        and m.status in ('active', 'pending')
-    )
+    leader_id = (select auth.uid())
+    or public.is_pod_member(id, true)
   );
 
 create policy pods_update_leader on public.pods
@@ -147,54 +194,29 @@ create policy pods_update_leader on public.pods
 -- Memberships
 create policy memberships_select on public.memberships
   for select using (
-    user_id = auth.uid()
-    or exists (
-      select 1 from public.pods p
-      where p.id = memberships.pod_id and p.leader_id = auth.uid()
-    )
+    user_id = (select auth.uid())
+    or public.is_pod_leader(pod_id)
   );
 
 create policy memberships_insert_self on public.memberships
   for insert with check (user_id = auth.uid());
 
 create policy memberships_update_leader on public.memberships
-  for update using (
-    exists (
-      select 1 from public.pods p
-      where p.id = memberships.pod_id and p.leader_id = auth.uid()
-    )
-  );
+  for update using (public.is_pod_leader(pod_id));
 
 -- Check-ins
 create policy check_ins_insert_active on public.check_ins
   for insert with check (
-    user_id = auth.uid()
-    and exists (
-      select 1 from public.memberships m
-      where m.pod_id = check_ins.pod_id
-        and m.user_id = auth.uid()
-        and m.status = 'active'
-    )
+    user_id = (select auth.uid())
+    and public.is_active_pod_member(pod_id)
   );
 
 create policy check_ins_select_pod on public.check_ins
-  for select using (
-    exists (
-      select 1 from public.memberships m
-      where m.pod_id = check_ins.pod_id
-        and m.user_id = auth.uid()
-        and m.status = 'active'
-    )
-  );
+  for select using (public.is_active_pod_member(pod_id));
 
 -- Invite codes
 create policy invite_codes_leader on public.invite_codes
-  for all using (
-    exists (
-      select 1 from public.pods p
-      where p.id = invite_codes.pod_id and p.leader_id = auth.uid()
-    )
-  );
+  for all using (public.is_pod_leader(pod_id));
 
 create policy invite_codes_validate on public.invite_codes
   for select using (active = true and expires_at > now());
