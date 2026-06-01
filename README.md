@@ -87,6 +87,7 @@ In Supabase **Table Editor** → `profiles` and `pods` should have new rows.
 | `PGRST205` / `Could not find table 'public.profiles'` | Run the migration SQL (step 1 below) — tables were never created |
 | **500** on `profiles` | Run [`supabase/migrations/00002_fix_profile_auth.sql`](supabase/migrations/00002_fix_profile_auth.sql) in SQL Editor (fixes trigger + insert policy + backfill) |
 | `infinite recursion` on `memberships` | Run [`supabase/migrations/00003_fix_rls_recursion.sql`](supabase/migrations/00003_fix_rls_recursion.sql) in SQL Editor |
+| `profiles_id_fkey` foreign key violation | Run [`supabase/migrations/00004_ensure_profile_rpc.sql`](supabase/migrations/00004_ensure_profile_rpc.sql), then **sign out**, clear site data, sign in again |
 
 ## Deploy to Netlify (web)
 
