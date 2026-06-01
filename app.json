@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "peas-in-a-pod",
+    "name": "Peas in a Pod",
     "slug": "peas-in-a-pod",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -33,7 +33,8 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
+      ],
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true
