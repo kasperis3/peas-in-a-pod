@@ -85,6 +85,24 @@ In Supabase **Table Editor** → `profiles` and `pods` should have new rows.
 | RLS / permission errors | Re-run the full migration SQL (policies are at the bottom of the file) |
 | “Invalid API key” | Use **anon public**, not service_role; no extra spaces in `.env` |
 
+## Deploy to Netlify (web)
+
+1. Connect the repo; set **Base directory** to `peas-in-a-pod` if the repo root is the parent folder.
+2. Build settings are in [`netlify.toml`](netlify.toml) (`expo export -p web` → `dist/`).
+3. In **Site configuration → Environment variables**, add (for production builds):
+
+   | Variable | Value |
+   |----------|--------|
+   | `EXPO_PUBLIC_SUPABASE_URL` | Your Supabase project URL |
+   | `EXPO_PUBLIC_SUPABASE_ANON_KEY` | anon public key |
+   | `EXPO_PUBLIC_DATA_SOURCE` | `supabase` |
+
+   Mark them as **build** scope (not “secret” scanning targets — they are public client keys).
+
+4. If the build still fails on “secrets scanning”, confirm [`netlify.toml`](netlify.toml) is committed (`SECRETS_SCAN_OMIT_KEYS`).
+
+5. In Supabase **Authentication → URL configuration**, add your Netlify URL to **Redirect URLs** (e.g. `https://your-site.netlify.app/**`).
+
 ### CLI alternative (optional)
 
 If you use the [Supabase CLI](https://supabase.com/docs/guides/cli):
