@@ -43,7 +43,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
     } catch (e) {
       console.error('Auth init failed', e);
-      set({ userId: null, profile: null, initialized: true, error: 'Could not connect' });
+      const message =
+        e instanceof Error
+          ? e.message
+          : typeof e === 'object' && e !== null && 'message' in e
+            ? String((e as { message: unknown }).message)
+            : 'Could not connect';
+      set({ userId: null, profile: null, initialized: true, error: message });
     }
   },
 

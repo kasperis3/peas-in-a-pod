@@ -84,6 +84,7 @@ In Supabase **Table Editor** → `profiles` and `pods` should have new rows.
 | Sign-up fails / “Email not confirmed” | Disable email confirmation in Auth settings |
 | RLS / permission errors | Re-run the full migration SQL (policies are at the bottom of the file) |
 | “Invalid API key” | Use **anon public**, not service_role; no extra spaces in `.env` |
+| `PGRST205` / `Could not find table 'public.profiles'` | Run the migration SQL (step 1 below) — tables were never created |
 
 ## Deploy to Netlify (web)
 

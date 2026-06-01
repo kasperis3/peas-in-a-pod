@@ -115,6 +115,9 @@ create policy profiles_select_pod_mates on public.profiles
 create policy profiles_update_own on public.profiles
   for update using (auth.uid() = id);
 
+create policy profiles_insert_own on public.profiles
+  for insert with check (auth.uid() = id);
+
 -- Pods
 create policy pods_insert on public.pods
   for insert with check (auth.uid() = leader_id);

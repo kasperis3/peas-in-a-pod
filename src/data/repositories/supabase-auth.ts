@@ -34,14 +34,42 @@ export function createSupabaseAuthRepository(): AuthRepository {
 
     async getProfile() {
       const { data: session } = await supabase.auth.getSession();
-      if (!session.session?.user) return null;
+      const user = session.session?.user;
+      if (!user) return null;
+
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', session.session.user.id)
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (error) {
+        if (error.code === 'PGRST205') {
+          throw new Error(
+            'Database not set up. Run supabase/migrations/00001_skateboard.sql in the Supabase SQL Editor.'
+          );
+        }
+        throw error;
+      }
+
+      if (data) return mapProfile(data);
+
+      // User exists in Auth but no profile row (signed up before trigger / manual fix)
+      const name =
+        (user.user_metadata?.name as string) ||
+        user.email?.split('@')[0] ||
+        'Pea';
+      const { data: created, error: insertError } = await supabase
+        .from('profiles')
+        .insert({
+          id: user.id,
+          name,
+          email: user.email ?? '',
+        })
+        .select()
         .single();
-      if (error) throw error;
-      return mapProfile(data);
+      if (insertError) throw insertError;
+      return mapProfile(created);
     },
 
     async updateProfile(updates) {
