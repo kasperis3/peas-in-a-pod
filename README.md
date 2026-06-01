@@ -103,6 +103,8 @@ In Supabase **Table Editor** → `profiles` and `pods` should have new rows.
 
 5. In Supabase **Authentication → URL configuration**, add your Netlify URL to **Redirect URLs** (e.g. `https://your-site.netlify.app/**`).
 
+**Blank page on Netlify?** Redeploy after the latest commit — the root layout used to render nothing until auth finished. You should see the welcome screen immediately at [https://peas-in-a-pod.netlify.app](https://peas-in-a-pod.netlify.app) or `/welcome`.
+
 ### CLI alternative (optional)
 
 If you use the [Supabase CLI](https://supabase.com/docs/guides/cli):

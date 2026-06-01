@@ -24,15 +24,22 @@ export function getRepositories(): AppRepositories {
     return cached;
   }
 
-  cached = {
-    auth: createSupabaseAuthRepository(),
-    pods: createSupabasePodRepository(),
-    memberships: createSupabaseMembershipRepository(),
-    checkIns: createSupabaseCheckInRepository(),
-    invites: createSupabaseInviteRepository(),
-    accountability: createSupabaseAccountabilityRepository(),
-  };
-  return cached;
+  try {
+    cached = {
+      auth: createSupabaseAuthRepository(),
+      pods: createSupabasePodRepository(),
+      memberships: createSupabaseMembershipRepository(),
+      checkIns: createSupabaseCheckInRepository(),
+      invites: createSupabaseInviteRepository(),
+      accountability: createSupabaseAccountabilityRepository(),
+    };
+    return cached;
+  } catch (e) {
+    console.warn('Supabase unavailable, using local data', e);
+    seedLocalDemoUser();
+    cached = createLocalRepositories();
+    return cached;
+  }
 }
 
 export function usesLocalData(): boolean {

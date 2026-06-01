@@ -24,22 +24,27 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   error: null,
 
   async initialize() {
-    const repos = getRepositories();
-    const session = await repos.auth.getSession();
-    if (session) {
-      const profile = await repos.auth.getProfile();
-      set({ userId: session.userId, profile, initialized: true });
-    } else {
-      set({ userId: null, profile: null, initialized: true });
-    }
-    repos.auth.onAuthStateChange(async (userId) => {
-      if (!userId) {
-        set({ userId: null, profile: null });
-        return;
+    try {
+      const repos = getRepositories();
+      const session = await repos.auth.getSession();
+      if (session) {
+        const profile = await repos.auth.getProfile();
+        set({ userId: session.userId, profile, initialized: true });
+      } else {
+        set({ userId: null, profile: null, initialized: true });
       }
-      const profile = await repos.auth.getProfile();
-      set({ userId, profile });
-    });
+      repos.auth.onAuthStateChange(async (userId) => {
+        if (!userId) {
+          set({ userId: null, profile: null });
+          return;
+        }
+        const profile = await repos.auth.getProfile();
+        set({ userId, profile });
+      });
+    } catch (e) {
+      console.error('Auth init failed', e);
+      set({ userId: null, profile: null, initialized: true, error: 'Could not connect' });
+    }
   },
 
   async signIn(email, password) {
